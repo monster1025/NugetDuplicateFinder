@@ -1,0 +1,16 @@
+{
+  "Version": 1,
+  "ProjectMap": {
+    "50928ef9-08e0-4a69-8466-d08392e74e78": {
+      "ProjectGuid": "50928ef9-08e0-4a69-8466-d08392e74e78",
+      "DisplayName": "ProjectNugetDuplicateFinder",
+      "ColorIndex": 0
+    },
+    "200c0898-769a-4775-90a5-4d10c1fe0023": {
+      "ProjectGuid": "200c0898-769a-4775-90a5-4d10c1fe0023",
+      "DisplayName": "ProjectNugetDuplicateFinder",
+      "ColorIndex": 1
+    }
+  },
+  "NextColorIndex": 2
+}

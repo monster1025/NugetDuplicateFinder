@@ -1,5 +1,6 @@
 ﻿using System;
 using System.Collections.Generic;
+using System.Diagnostics;
 using System.IO;
 using System.Linq;
 using System.Xml.Linq;
@@ -11,11 +12,104 @@ namespace ProjectNugetDuplicateFinder
     {
         static void Main(string[] args)
         {
+            FixDuplicates();
+            //UpgradePackage("Sibur.Digital.MultiBus.Dto", "0.2.84");
+        }
+
+        private static void UpgradePackage(string packageName, string targetVersion)
+        {
+            var searchCriteria = new FileSearchCriteria
+            {
+                Extensions = new string[] {".sln"},
+                BaseDirectory = "D:\\Projects\\sibur",
+                TargetDirectories = new string[] { "implementation" },
+                Recursive = true,
+            };
+
+            var solutions = new Finder().Find(searchCriteria);
+            foreach (var solution in solutions)
+            {
+                var solutionDirectory = new FileInfo(solution).Directory!.ToString();
+                var projectSearchCriteria = searchCriteria with
+                {
+                    Extensions = new string[] { ".csproj" },
+                    BaseDirectory = solutionDirectory,
+                    TargetDirectories = new string[] {"."}
+                };
+                var projects = new Finder().Find(projectSearchCriteria);
+
+                var isRepositoryChanged = false;
+                foreach (var project in projects)
+                {
+                    try
+                    {
+                        var text = File.ReadAllText(project);
+                        var document = XDocument.Parse(text);
+                        var versionsDiffersFromCurrent = document
+                            .Descendants("ItemGroup")
+                            .Descendants("PackageReference")
+                            .Where(f => f.Attribute("Include").Value.ToLower() == packageName.ToLower());
+
+                        var isAnyRemoved = false;
+                        foreach (var versionDiffersFromCurrent in versionsDiffersFromCurrent)
+                        {
+                            var oldVersion = versionDiffersFromCurrent.Attribute("Version")!.Value;
+                            if (oldVersion != targetVersion)
+                            {
+                                versionDiffersFromCurrent.Attribute("Version").Value = targetVersion;
+                                isAnyRemoved = true;
+                                isRepositoryChanged = true;
+                            }
+                        }
+
+                        if (isAnyRemoved)
+                        {
+                            var newXml = document.ToString();
+                            File.WriteAllText(project, newXml);
+                            Console.WriteLine($"> Fixed: {project}.");
+                        }
+                    }
+                    catch (Exception ex)
+                    {
+                        Console.WriteLine(ex);
+                    }
+                }
+
+                if (isRepositoryChanged)
+                {
+                    var hash = Guid.NewGuid().ToString("N")[0..4];
+                    var cmd = "git switch master && " +
+                              $"git pull && " +
+                              $"git checkout -b MPSH-upgrade-dto-{hash} && " +
+                              "git add . && " +
+                              $"git commit -m \"Upgrade_{packageName}_to_version_{targetVersion}\" && " +
+                              $"git push -o merge_request.create origin MPSH-upgrade-dto-{hash} && " +
+                              $"git switch master && " +
+                              $"git branch -D MPSH-upgrade-dto-{hash}";
+
+                              var info = new ProcessStartInfo
+                              {
+                                  FileName = "cmd.exe",
+                                  WorkingDirectory = solutionDirectory,
+                                  ArgumentList = {$"/C {cmd}"}
+                              };
+                    System.Diagnostics.Process.Start(info);
+                }
+            }
+
+            Console.WriteLine("Press enter to continue.");
+            Console.WriteLine("Fixed following project files:");
+            Console.ReadLine();
+        }
+
+
+        static void FixDuplicates()
+        {
             var searchCriteria = new FileSearchCriteria
             {
                 Extensions = new string[] { ".csproj" },
-                BaseDirectory = "D:\\Projects\\onelia",
-                TargetDirectories = new string[] { "onelia" },
+                BaseDirectory = "D:\\Projects",
+                TargetDirectories = new string[] { "sibur" },
                 Recursive = true,
             };
 
@@ -54,6 +148,7 @@ namespace ProjectNugetDuplicateFinder
                     {
                         var newXml = document.ToString();
                         File.WriteAllText(project, newXml);
+                        Console.WriteLine($"> Fixed: {project}.");
                     }
                 }
                 catch (Exception ex)
@@ -61,6 +156,10 @@ namespace ProjectNugetDuplicateFinder
                     Console.WriteLine(ex);
                 }
             }
+
+            Console.WriteLine("Press enter to continue.");
+            Console.WriteLine("Fixed following project files:");
+            Console.ReadLine();
 
             Console.WriteLine(string.Join("\n", result));
             Console.ReadLine();

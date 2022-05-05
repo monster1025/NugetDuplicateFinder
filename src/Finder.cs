@@ -2,7 +2,6 @@
 using System.Collections.Generic;
 using System.IO;
 using System.Linq;
-using System.Text;
 
 namespace ProjectNugetDuplicateFinder
 {
@@ -18,7 +17,7 @@ namespace ProjectNugetDuplicateFinder
             return Directory.GetFiles(folderPath, "*.*", searchOption)
                 .Where(s =>
                     !extensions.Any() ||
-                    extensions.Any(e => string.Compare(e, Path.GetExtension(s), true) == 0)
+                    extensions.Any(e => string.Compare(e, Path.GetExtension(s), StringComparison.OrdinalIgnoreCase) == 0)
                 );
         }
     }
